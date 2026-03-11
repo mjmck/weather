@@ -1,65 +1,122 @@
+"use client";
+
+import { useState } from "react";
+import SearchBar from "./components/SearchBar";
 import Image from "next/image";
 
 export default function Home() {
+  const [location, setLocation] = useState("");
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSearch = async (input: string) => {
+    setLoading(true);
+    setError(null);
+    setLocation(input);
+
+    try {
+      const res = await fetch(`/api/weather?q=${encodeURIComponent(input)}`);
+      if (!res.ok) throw new Error("Failed to fetch weather");
+      const weather = await res.json();
+      setData(weather);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Something went wrong");
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-gradient-to-br from-sky-900 via-slate-900 to-slate-950 text-slate-50 flex items-center justify-center px-4">
+      <div className="w-full max-w-xl">
+        <header className="mb-8 text-center">
+          <h1 className="text-3xl font-semibold tracking-tight mb-2">
+            Weather
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-sm text-slate-300">
+            Search any location to see current conditions instantly.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        </header>
+
+        <SearchBar onSearch={handleSearch} />
+
+        <section className="mt-6">
+          {loading && (
+            <div className="rounded-2xl bg-slate-900/60 border border-slate-700/60 px-5 py-4 text-sm text-slate-200 shadow-lg shadow-sky-900/30">
+              Fetching the latest weather…
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-2xl bg-red-900/40 border border-red-500/60 px-5 py-4 text-sm text-red-100 shadow-lg shadow-red-900/30">
+              {error}
+            </div>
+          )}
+
+          {data && !loading && !error && (
+            <div className="rounded-3xl bg-slate-900/70 border border-slate-700/70 px-6 py-5 mt-2 shadow-2xl shadow-sky-900/40 backdrop-blur">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-400 mb-1">
+                    Current Weather  |  {(data.location.localtime).slice(-5)}
+                  </p>
+                  <h2 className="text-xl font-semibold capitalize">
+                    {location || data.location?.name}
+                  </h2>
+                  <p className="text-sm text-slate-300 mt-1 flex items-center gap-2">
+                    <span className="text-3xl font-semibold">
+                      {Math.round(data.current.temp_c)}°C
+                    </span>
+                    <span className="text-slate-300">
+                      {data.current.condition.text}
+                    </span>
+                  </p>
+                </div>
+
+                <div className="flex flex-col items-end">
+                  <img
+                    src={data.current.condition.icon}
+                    alt={data.current.condition.text}
+                    className="w-16 h-16 drop-shadow-lg"
+                  />
+                  <p className="mt-2 text-xs text-slate-400">
+                    Feels like {Math.round(data.current.feelslike_c)}°C
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-3 gap-3 text-xs text-slate-200">
+                <div className="rounded-2xl bg-slate-800/60 px-3 py-2 border border-slate-700/60">
+                  <p className="text-[0.65rem] uppercase tracking-wide text-slate-400">
+                    Humidity
+                  </p>
+                  <p className="mt-1 text-sm font-medium">
+                    {data.current.humidity}%
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-slate-800/60 px-3 py-2 border border-slate-700/60">
+                  <p className="text-[0.65rem] uppercase tracking-wide text-slate-400">
+                    Wind
+                  </p>
+                  <p className="mt-1 text-sm font-medium">
+                    {data.current.wind_kph} kph
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-slate-800/60 px-3 py-2 border border-slate-700/60">
+                  <p className="text-[0.65rem] uppercase tracking-wide text-slate-400">
+                    UV Index
+                  </p>
+                  <p className="mt-1 text-sm font-medium">
+                    {data.current.uv}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+    </main>
   );
 }
